@@ -148,7 +148,7 @@ const App = () => {
               "MAXVALUE:",
               MAX_MINT_PRESALE
             );
-            if (Number(userBalance) >= Number(MAX_MINT_PRESALE)) {
+            if (Number(userBalance) + mintCount > Number(MAX_MINT_PRESALE)) {
               setMaxMint(true);
             } else {
               if (mintCount === 0) {
