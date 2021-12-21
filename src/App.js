@@ -31,6 +31,7 @@ const App = () => {
   const [confirmTransaction, setConfirmTransaction] = useState(false);
   const [saleLive, setSaleLive] = useState(false);
   const [whitelist, setWhiteList] = useState(false);
+  const [maxMint, setMaxMint] = useState(false);
 
   async function loadWeb3() {
     if (window.ethereum) {
@@ -134,41 +135,58 @@ const App = () => {
           const isVerified = data.verified;
           // console.log(isVerified, typeof data.verified);
           if (isVerified) {
-            if (mintCount === 0) {
-              setLessMintAmountAlert(true);
-            } else {
-              setConfirmTransaction(true);
-              const finalPrice = Number(price) * mintCount;
-              contract.methods
-                .presaleMintNFT(mintCount)
-                .send({ from: account, value: finalPrice })
-                .on("transactionHash", function () {
-                  setConfirmTransaction(false);
-                  setMintingInProgress(true);
-                })
-                .on("confirmation", function () {
-                  const el = document.createElement("div");
-                  el.innerHTML =
-                    "View minted NFT on OpenSea : <a href='https://testnets.opensea.io/account '>View Now</a>";
+            const userBalance = await contract.methods
+              .balanceOf(account)
+              .call();
+            const MAX_MINT_PRESALE = await contract.methods
+              .MAX_ALLOWED_PRESALE()
+              .call();
 
-                  setNftMinted(true);
-                  setConfirmTransaction(false);
-                  setMintingInProgress(false);
-                  setTimeout(() => {
-                    window.location.reload(false);
-                  }, 5000);
-                })
-                .on("error", function (error, receipt) {
-                  if (error.code === 4001) {
-                    setTransactionRejected(true);
+            console.log(
+              "userBalance:",
+              userBalance,
+              "MAXVALUE:",
+              MAX_MINT_PRESALE
+            );
+            if (userBalance >= MAX_MINT_PRESALE) {
+              setMaxMint(true);
+            } else {
+              if (mintCount === 0) {
+                setLessMintAmountAlert(true);
+              } else {
+                setConfirmTransaction(true);
+                const finalPrice = Number(price) * mintCount;
+                contract.methods
+                  .presaleMintNFT(mintCount)
+                  .send({ from: account, value: finalPrice })
+                  .on("transactionHash", function () {
+                    setConfirmTransaction(false);
+                    setMintingInProgress(true);
+                  })
+                  .on("confirmation", function () {
+                    const el = document.createElement("div");
+                    el.innerHTML =
+                      "View minted NFT on OpenSea : <a href='https://testnets.opensea.io/account '>View Now</a>";
+
+                    setNftMinted(true);
                     setConfirmTransaction(false);
                     setMintingInProgress(false);
-                  } else {
-                    setTransactionFailed(true);
-                    setConfirmTransaction(false);
-                    setMintingInProgress(false);
-                  }
-                });
+                    setTimeout(() => {
+                      window.location.reload(false);
+                    }, 5000);
+                  })
+                  .on("error", function (error, receipt) {
+                    if (error.code === 4001) {
+                      setTransactionRejected(true);
+                      setConfirmTransaction(false);
+                      setMintingInProgress(false);
+                    } else {
+                      setTransactionFailed(true);
+                      setConfirmTransaction(false);
+                      setMintingInProgress(false);
+                    }
+                  });
+              }
             }
           } else {
             // alert("you are not white listed");
@@ -208,6 +226,12 @@ const App = () => {
         onClose={setSaleLive}
         title=" Presale is not live"
         text="Presale is not live yet. Please follow our discord for the updates"
+      />
+      <InformationModal
+        open={maxMint}
+        onClose={setMaxMint}
+        title="Oops"
+        text="You have reached maximum NFT minting limit per account!"
       />
       <InformationModal
         open={whitelist}
